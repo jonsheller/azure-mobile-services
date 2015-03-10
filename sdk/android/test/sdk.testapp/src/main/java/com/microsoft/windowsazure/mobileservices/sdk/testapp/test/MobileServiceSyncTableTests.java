@@ -36,6 +36,7 @@ import com.microsoft.windowsazure.mobileservices.sdk.testapp.framework.filters.S
 import com.microsoft.windowsazure.mobileservices.sdk.testapp.framework.filters.ServiceFilterResponseMock;
 import com.microsoft.windowsazure.mobileservices.sdk.testapp.framework.filters.StatusLineMock;
 import com.microsoft.windowsazure.mobileservices.sdk.testapp.framework.mocks.MobileServiceLocalStoreMock;
+import com.microsoft.windowsazure.mobileservices.sdk.testapp.framework.mocks.MobileServiceLocalStoreSlowMock;
 import com.microsoft.windowsazure.mobileservices.sdk.testapp.framework.mocks.MobileServiceSyncHandlerMock;
 import com.microsoft.windowsazure.mobileservices.sdk.testapp.test.helpers.EncodingUtilities;
 import com.microsoft.windowsazure.mobileservices.sdk.testapp.test.types.CustomFunctionTwoParameters;
@@ -1255,6 +1256,41 @@ public class MobileServiceSyncTableTests extends InstrumentationTestCase {
 
         assertEquals(operationHandler.PushCompletionResult.getStatus(), MobileServicePushStatus.Complete);
     }
+	
+	public void testSimultaneousOperations() {
+		try {
+			MobileServiceLocalStoreSlowMock store = new MobileServiceLocalStoreSlowMock();
+
+			MobileServiceClient client = new MobileServiceClient(appUrl, appKey, getInstrumentation().getTargetContext());
+
+			client.getSyncContext().initialize(store, new SimpleSyncHandler()).get();
+
+			MobileServiceSyncTable<StringIdType> table2 = client.getSyncTable(StringIdType.class);
+			StringIdType item = new StringIdType();
+
+			item.Id = "an id";
+			item.String = "what?";
+
+			table2.insert(item).get();
+			
+			StringIdType item2 = new StringIdType();
+			item2.Id = "another id";
+			item2.String = "why?";
+			
+			table2.insert(item2).get();
+			
+			ListenableFuture lookupResult;
+			ListenableFuture deleteResult;
+			
+			lookupResult = table2.lookUp("an id");
+			deleteResult = table2.delete(item2);
+			
+			lookupResult.get();
+			deleteResult.get();
+		} catch (Exception ex) {
+			fail("Synchronous operations test failed " + ex.toString());
+		}
+	}
 
     // Test Filter
     private ServiceFilter getTestFilter(String... content) {
