@@ -1291,6 +1291,41 @@ public class MobileServiceSyncTableTests extends InstrumentationTestCase {
 			fail("Synchronous operations test failed " + ex.toString());
 		}
 	}
+	
+	public void testSimultaneousDeletes() {
+		try {
+			MobileServiceLocalStoreSlowMock store = new MobileServiceLocalStoreSlowMock();
+
+			MobileServiceClient client = new MobileServiceClient(appUrl, appKey, getInstrumentation().getTargetContext());
+
+			client.getSyncContext().initialize(store, new SimpleSyncHandler()).get();
+
+			MobileServiceSyncTable<StringIdType> table2 = client.getSyncTable(StringIdType.class);
+			StringIdType item = new StringIdType();
+
+			item.Id = "an id";
+			item.String = "what?";
+
+			table2.insert(item).get();
+			
+			StringIdType item2 = new StringIdType();
+			item2.Id = "another id";
+			item2.String = "why?";
+			
+			table2.insert(item2).get();
+			
+			ListenableFuture deleteResult1;
+			ListenableFuture deleteResult2;
+			
+			deleteResult1 = table2.delete(item);
+			deleteResult2 = table2.delete(item2);
+			
+			deleteResult1.get();
+			deleteResult2.get();
+		} catch (Exception ex) {
+			fail("Simultaneous deletion failed " + ex.toString());
+		}
+	}
 
     // Test Filter
     private ServiceFilter getTestFilter(String... content) {

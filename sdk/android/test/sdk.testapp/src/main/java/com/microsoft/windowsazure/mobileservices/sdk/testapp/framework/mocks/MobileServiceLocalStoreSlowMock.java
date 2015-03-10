@@ -155,11 +155,14 @@ public class MobileServiceLocalStoreSlowMock implements MobileServiceLocalStore 
     public void delete(String tableName, String itemId) throws MobileServiceLocalStoreException {
 		try {
 			mDatabaseOpen = true;
+			Thread.sleep(1000);
 			Map<String, JsonObject> table = GetTable(tableName);
 
 			table.remove(itemId);
 
 			return;
+		} catch (InterruptedException e) {
+			// Don't care.
 		} finally {
 			if (!mDatabaseOpen) {
 				throw new IllegalStateException("Database closed while operation in progress");
